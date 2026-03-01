@@ -4,18 +4,19 @@ metadata:
   name: flame-ingress
   namespace: flame-dating
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Uncomment below if you have cert-manager installed for auto TLS:
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
-  tls:
-    - hosts:
-        # Replace with your actual domain
-        - flame.yourdomain.com
-      secretName: flame-tls
+  # Uncomment the tls block after setting up cert-manager + your domain:
+  # tls:
+  #   - hosts:
+  #       - flame.yourdomain.com
+  #     secretName: flame-tls
   rules:
-    # Replace with your actual domain
+    # Replace with your actual domain, or remove "host" to accept all traffic
     - host: flame.yourdomain.com
       http:
         paths:
