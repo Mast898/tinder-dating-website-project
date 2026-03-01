@@ -7,7 +7,7 @@ metadata:
     app: flame
     component: web
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: flame
     component: web
@@ -16,3 +16,4 @@ spec:
       targetPort: 3000
       protocol: TCP
       name: http
+      nodePort: 30080
