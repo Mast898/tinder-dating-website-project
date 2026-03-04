@@ -21,7 +21,7 @@ spec:
       containers:
         - name: flame-web
           # Replace with your actual container registry image
-          image: your-registry/flame-dating:latest
+          image: ghcr.io/mast898/tinder:v5
           ports:
             - containerPort: 3000
               protocol: TCP
