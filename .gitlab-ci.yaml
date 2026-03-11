@@ -1,0 +1,66 @@
+# .gitlab-ci.yml
+image: docker:24
+
+variables:
+  DOCKER_REGISTRY: registry.gitlab.com
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE
+  NODE_VERSION: "20"
+
+stages:
+  - build
+  - deploy
+
+# ─────────────────────────────────────────────
+# 1. Сборка Next.js + Docker образ
+# ─────────────────────────────────────────────
+build_job:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin $DOCKER_REGISTRY
+  script:
+    # Сборка Docker образа с тегом коммита и latest
+    - docker build -t "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - docker build -t "$DOCKER_IMAGE:latest" .
+    # Отправка в реестр
+    - docker push "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker push "$DOCKER_IMAGE:latest"
+  tags:
+    - flame
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ─────────────────────────────────────────────
+# 2. Деплой (пересоздание контейнера)
+# ─────────────────────────────────────────────
+deploy_job:
+  stage: deploy
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin $DOCKER_REGISTRY
+  script:
+    # Pull новой версии
+    - docker pull "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
+    # Остановка и удаление старого контейнера
+    - docker stop flame_app || true
+    - docker rm flame_app || true
+    # Запуск нового контейнера
+    - docker run -d \
+        --name flame_app \
+        --restart unless-stopped \
+        -p 3000:3000 \
+        -e NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+        -e NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+        "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
+    # Очистка старых образов (экономия места)
+    - docker image prune -f
+  tags:
+    - flame
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  needs:
+    - build_job
