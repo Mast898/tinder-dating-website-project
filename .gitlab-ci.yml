@@ -1,18 +1,13 @@
-# .gitlab-ci.yml
 image: docker:24
 
 variables:
   DOCKER_REGISTRY: registry.gitlab.com
   DOCKER_IMAGE: $CI_REGISTRY_IMAGE
-  NODE_VERSION: "20"
 
 stages:
   - build
   - deploy
 
-# ─────────────────────────────────────────────
-# 1. Сборка Next.js + Docker образ
-# ─────────────────────────────────────────────
 build_job:
   stage: build
   image: docker:24
@@ -21,10 +16,15 @@ build_job:
   before_script:
     - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin $DOCKER_REGISTRY
   script:
-    # Сборка Docker образа с тегом коммита и latest
+    # Создаём .env.local для сборки
+    - echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL" > .env.local
+    - echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY" >> .env.local
+    
+    # Сборка Docker образа
     - docker build -t "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA" .
     - docker build -t "$DOCKER_IMAGE:latest" .
-    # Отправка в реестр
+    
+    # Push в реестр
     - docker push "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
     - docker push "$DOCKER_IMAGE:latest"
   tags:
@@ -32,9 +32,6 @@ build_job:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-# ─────────────────────────────────────────────
-# 2. Деплой (пересоздание контейнера)
-# ─────────────────────────────────────────────
 deploy_job:
   stage: deploy
   image: docker:24
@@ -46,7 +43,12 @@ deploy_job:
     - docker pull "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
     - docker stop flame_app || true
     - docker rm flame_app || true
-    - docker run -d --name flame_app --restart unless-stopped -p 3000:3000 -e NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" -e NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" -e SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" -e SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker run -d --name flame_app --restart unless-stopped -p 3000:3000 \
+        -e NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+        -e NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+        -e SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
+        -e SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+        "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
   tags:
     - flame
   rules:
