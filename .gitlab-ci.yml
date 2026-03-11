@@ -43,12 +43,7 @@ deploy_job:
     - docker pull "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
     - docker stop flame_app || true
     - docker rm flame_app || true
-    - docker run -d --name flame_app --restart unless-stopped -p 3000:3000 \
-        -e NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
-        -e NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-        -e SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
-        -e SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-        "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker run -d --name flame_app --restart unless-stopped -p 3000:3000 -e NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" -e NEXT_PUBLIC_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" -e SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" -e SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY" "$DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA"
   tags:
     - flame
   rules:
