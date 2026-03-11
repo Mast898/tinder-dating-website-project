@@ -12,62 +12,85 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-between bg-background px-6 py-12">
-      <div className="flex-1 flex flex-col items-center justify-center gap-10 w-full max-w-sm">
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center w-20 h-20 rounded-3xl bg-primary shadow-lg shadow-primary/25">
-            <Flame className="w-11 h-11 text-primary-foreground" />
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-white to-orange-50">
+      <div className="container mx-auto px-4 py-12">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-12">
+          <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-pink-500 to-red-500 rounded-3xl shadow-lg mb-6">
+            <Flame className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-foreground tracking-tight">Flame</h1>
-          <p className="text-muted-foreground text-center text-base leading-relaxed text-balance">
-            Discover people near you and find your perfect match
+          <h1 className="text-5xl font-bold text-gray-900 mb-3">Flame</h1>
+          <p className="text-xl text-gray-600 text-center">
+            Найдите идеальную пару рядом с вами
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 w-full">
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-              <Heart className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-semibold text-sm text-card-foreground">Swipe & Match</p>
-              <p className="text-xs text-muted-foreground">Like profiles and get matched instantly</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-accent/20">
-              <MessageCircle className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <p className="font-semibold text-sm text-card-foreground">Chat in Real-Time</p>
-              <p className="text-xs text-muted-foreground">Message your matches privately</p>
+        {/* Features */}
+        <div className="max-w-md mx-auto space-y-4 mb-12">
+          <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-pink-100 rounded-xl">
+                <Heart className="w-6 h-6 text-pink-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Свайпай и находи совпадения
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Лайкай профили и получай матчи мгновенно
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-              <Sparkles className="w-5 h-5 text-primary" />
+
+          <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-xl">
+                <MessageCircle className="w-6 h-6 text-orange-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Общайся в реальном времени
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Пиши своим матчам приватно
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-sm text-card-foreground">Smart Discovery</p>
-              <p className="text-xs text-muted-foreground">Find people based on your interests</p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-xl">
+                <Sparkles className="w-6 h-6 text-purple-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Умный подбор
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Находи людей по интересам
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-3 w-full max-w-sm pt-8">
-        <Link
-          href="/auth/sign-up"
-          className="flex items-center justify-center w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 transition-colors"
-        >
-          Create Account
-        </Link>
-        <Link
-          href="/auth/login"
-          className="flex items-center justify-center w-full h-12 rounded-xl bg-secondary text-secondary-foreground font-semibold text-base hover:bg-secondary/80 transition-colors"
-        >
-          Sign In
-        </Link>
+        {/* Buttons */}
+        <div className="max-w-sm mx-auto space-y-3">
+          <Link
+            href="/auth/sign-up"
+            className="block w-full py-4 px-6 bg-gradient-to-r from-pink-500 to-red-500 text-white text-center font-semibold rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
+          >
+            Создать аккаунт
+          </Link>
+          <Link
+            href="/auth/login"
+            className="block w-full py-4 px-6 bg-white text-gray-900 text-center font-semibold rounded-2xl border-2 border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-all"
+          >
+            Войти
+          </Link>
+        </div>
       </div>
     </div>
   )
