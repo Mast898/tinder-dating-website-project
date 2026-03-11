@@ -1,8 +1,8 @@
 stages:
   - buld
 
-build_job:
-  stage: build
+buld_job:
+  stage: buld
 
   before_script:
     - echo "nomber1"
