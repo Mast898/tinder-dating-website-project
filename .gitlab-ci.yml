@@ -2,7 +2,7 @@ stages:
   - buld
 
 build_job:
-  stages: build
+  stage: build
 
   before_script:
     - echo "nomber1"
