@@ -1,18 +1,17 @@
 stages:
   - buld
 
-
-
 build_job:
   stages: build
 
-before_script:
-  - echo "nomber1"
+  before_script:
+    - echo "nomber1"
 
-script:
-  - echo "nomber2"
+  script:
+    - echo "nomber2"
 
-after_script:
-  - echo "nomber3"
+  after_script:
+    - echo "nomber3"
+  tags:
+    - flame
 
-  
