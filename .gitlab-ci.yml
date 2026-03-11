@@ -1,17 +1,30 @@
+ 
+variables: #ЭТО ПЕРЕМЕННЫЕ 
+  CI_REGISTRY_IMAGE: registry.gitlab.com/shutkov/deployment-web-service
+  #IMAGE_NAME: docker push registry.gitlab.com/shutkov/deployment-web-service
+  #"$CI_REGISTRY:$CI_PROJECT_PATH:$CI_COMMIT_SHORT_SHA"
 stages:
-  - buld
-
-buld_job:
-  stage: buld
-
+ - buld #имя незарезервировано, можно указывать любое 
+ - deploy
+buld_job: # название даем тоже любое,для простаты лучше так 
+  stage: buld #названия должны совподать со stages, как в кубер ключ значение
   before_script:
-    - echo "nomber1"
-
-  script:
-    - echo "nomber2"
-
-  after_script:
-    - echo "nomber3"
+    - echo "$PASS" | docker login -u "$USER" --password-stdin "$CI_REGISTRY_IMAGE" # 
+  script: # директива скрипт, описывает то что мы будем делать 
+    - docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" . # запустить docker с переменными что указали в variables
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" 
   tags:
-    - flame
+    - deployment
 
+
+deploy_job: # разварачиваем Docker 
+  stage: deploy 
+  before_script:
+    - echo "$PASS" | docker login -u "$USER" --password-stdin "$CI_REGISTRY_IMAGE"
+  script: 
+    - docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker stop my_app || true #остановить Docker 
+    - docker rm my_app || true  #удалить 
+    - docker run -d --name my_app -p 5000:5000 "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" # запустить новый с портом 5000
+  tags:
+   - deployment
