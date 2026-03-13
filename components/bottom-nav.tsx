@@ -96,7 +96,8 @@ export function BottomNav() {
 
   const fetchNotifications = async () => {
     try {
-      const {  { user } } = await supabase.auth.getUser()
+      // ПРАВИЛЬНО - добавляем `data:`
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       // Новые матчи
