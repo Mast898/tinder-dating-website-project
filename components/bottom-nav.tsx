@@ -13,7 +13,6 @@ interface NavItem {
   icon: React.ElementType
   label: string
   activeColor: string
-  badge?: number | null
 }
 
 const navItems: NavItem[] = [
@@ -86,7 +85,7 @@ export function BottomNav() {
       )
       .subscribe()
 
-    // Опрос каждые 30 секунд для надёжности
+    // Опрос каждые 30 секунд
     const interval = setInterval(fetchNotifications, 30000)
 
     return () => {
@@ -171,13 +170,11 @@ export function BottomNav() {
       const currentIndex = navItems.findIndex(item => pathname.startsWith(item.href))
       
       if (isLeftSwipe && currentIndex < navItems.length - 1) {
-        // Свайп влево → следующая вкладка
         handleNavClick(navItems[currentIndex + 1].href)
         window.location.href = navItems[currentIndex + 1].href
       }
       
       if (isRightSwipe && currentIndex > 0) {
-        // Свайп вправо → предыдущая вкладка
         handleNavClick(navItems[currentIndex - 1].href)
         window.location.href = navItems[currentIndex - 1].href
       }
@@ -192,15 +189,15 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-[#E5E7EB] shadow-lg"
       role="navigation"
       aria-label="Основная навигация"
-      initial={{ y: 100 }}
-      animate={{ y: 0 }}
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">
-        {navItems.map((item, index) => {
+        {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href)
           const Icon = item.icon
           
@@ -222,7 +219,7 @@ export function BottomNav() {
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              {/* Icon with fill effect */}
+              {/* Icon with animation */}
               <motion.div 
                 className="relative"
                 whileTap={{ scale: 0.9 }}
@@ -240,7 +237,7 @@ export function BottomNav() {
                   />
                 </motion.div>
                 
-                {/* Badge notification */}
+                {/* Badge notification with spring animation */}
                 <AnimatePresence>
                   {badge !== null && badge > 0 && (
                     <motion.span
@@ -256,7 +253,7 @@ export function BottomNav() {
                 </AnimatePresence>
               </motion.div>
               
-              {/* Label */}
+              {/* Label with animation */}
               <motion.span 
                 className={cn(
                   'text-[10px] font-medium transition-all duration-200',
