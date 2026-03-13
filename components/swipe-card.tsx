@@ -1,196 +1,101 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
-import { Heart, X, MapPin } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { Heart, X, Star, User } from 'lucide-react'
 
 interface Profile {
   id: string
   name: string
-  age: number | null
+  age: number
   bio: string
-  city: string
   photo_url: string
-  interests: string[]
+  distance?: number
+  interests?: string[]
 }
 
 interface SwipeCardProps {
   profile: Profile
-  onSwipe: (direction: 'left' | 'right') => void
-  isTop: boolean
+  onLike?: () => void
+  onNope?: () => void
 }
 
-export function SwipeCard({ profile, onSwipe, isTop }: SwipeCardProps) {
-  const [dragX, setDragX] = useState(0)
-  const [dragY, setDragY] = useState(0)
-  const [isDragging, setIsDragging] = useState(false)
-  const startPos = useRef({ x: 0, y: 0 })
-  const cardRef = useRef<HTMLDivElement>(null)
+export function SwipeCard({ profile, onLike, onNope }: SwipeCardProps) {
+  const [direction, setDirection] = useState<'left' | 'right' | null>(null)
 
-  const handleStart = useCallback((clientX: number, clientY: number) => {
-    if (!isTop) return
-    setIsDragging(true)
-    startPos.current = { x: clientX, y: clientY }
-  }, [isTop])
-
-  const handleMove = useCallback((clientX: number, clientY: number) => {
-    if (!isDragging) return
-    const dx = clientX - startPos.current.x
-    const dy = clientY - startPos.current.y
-    setDragX(dx)
-    setDragY(dy * 0.3)
-  }, [isDragging])
-
-  const handleEnd = useCallback(() => {
-    if (!isDragging) return
-    setIsDragging(false)
-
-    const threshold = 100
-    if (dragX > threshold) {
-      onSwipe('right')
-    } else if (dragX < -threshold) {
-      onSwipe('left')
-    }
-
-    setDragX(0)
-    setDragY(0)
-  }, [isDragging, dragX, onSwipe])
-
-  const rotation = dragX * 0.08
-  const opacity = Math.max(0, 1 - Math.abs(dragX) / 400)
-
-  const likeOpacity = Math.min(1, Math.max(0, dragX / 100))
-  const nopeOpacity = Math.min(1, Math.max(0, -dragX / 100))
+  const handleSwipe = (liked: boolean) => {
+    setDirection(liked ? 'right' : 'left')
+    setTimeout(() => {
+      if (liked) onLike?.()
+      else onNope?.()
+    }, 300)
+  }
 
   return (
     <div
-      ref={cardRef}
-      className={cn(
-        'absolute inset-0 select-none rounded-3xl overflow-hidden shadow-xl bg-card',
-        isTop ? 'z-10 cursor-grab' : 'z-0',
-        isDragging && 'cursor-grabbing',
-        !isDragging && !isTop && 'scale-[0.97] opacity-80'
-      )}
-      style={
-        isTop
-          ? {
-              transform: `translate(${dragX}px, ${dragY}px) rotate(${rotation}deg)`,
-              transition: isDragging ? 'none' : 'transform 0.3s ease-out',
-            }
-          : {
-              transition: 'transform 0.3s ease-out, opacity 0.3s ease-out',
-            }
-      }
-      onPointerDown={(e) => {
-        if (!isTop) return
-        e.preventDefault()
-        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-        handleStart(e.clientX, e.clientY)
-      }}
-      onPointerMove={(e) => handleMove(e.clientX, e.clientY)}
-      onPointerUp={handleEnd}
-      onPointerCancel={handleEnd}
-      role="article"
-      aria-label={`${profile.name}${profile.age ? `, ${profile.age}` : ''}`}
+      className={`bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
+        direction === 'left' ? '-translate-x-full rotate-[-20deg] opacity-0' :
+        direction === 'right' ? 'translate-x-full rotate-[20deg] opacity-0' : ''
+      }`}
     >
       {/* Photo */}
-      <div className="relative w-full h-full">
+      <div className="relative h-96 bg-gradient-to-br from-[#E5E7EB] to-[#D1D5DB]">
         {profile.photo_url ? (
           <img
             src={profile.photo_url}
-            alt={`${profile.name}'s photo`}
+            alt={profile.name}
             className="w-full h-full object-cover"
-            draggable={false}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-secondary">
-            <span className="text-6xl font-bold text-muted-foreground/30">
-              {profile.name.charAt(0).toUpperCase()}
-            </span>
+          <div className="flex items-center justify-center h-full">
+            <User className="w-24 h-24 text-[#9CA3AF]" />
           </div>
         )}
-
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-
-        {/* Like/Nope stamps */}
-        {isTop && (
-          <>
-            <div
-              className="absolute top-8 left-6 border-4 border-green-500 rounded-lg px-4 py-1 -rotate-12"
-              style={{ opacity: likeOpacity }}
-            >
-              <span className="text-green-500 text-3xl font-extrabold tracking-wider">LIKE</span>
-            </div>
-            <div
-              className="absolute top-8 right-6 border-4 border-red-500 rounded-lg px-4 py-1 rotate-12"
-              style={{ opacity: nopeOpacity }}
-            >
-              <span className="text-red-500 text-3xl font-extrabold tracking-wider">NOPE</span>
-            </div>
-          </>
-        )}
-
-        {/* Profile info */}
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        
+        {/* Info Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-3xl font-bold">{profile.name}</h2>
             {profile.age && (
-              <span className="text-xl text-white/80">{profile.age}</span>
+              <span className="text-2xl font-medium opacity-90">
+                {profile.age}
+              </span>
             )}
           </div>
-          {profile.city && (
-            <div className="flex items-center gap-1 mt-1">
-              <MapPin className="w-3.5 h-3.5 text-white/70" />
-              <span className="text-sm text-white/70">{profile.city}</span>
+          
+          {profile.distance && (
+            <div className="flex items-center gap-2 text-sm opacity-90 mb-3">
+              <Star className="w-4 h-4" />
+              <span>{profile.distance} км от вас</span>
             </div>
           )}
+          
           {profile.bio && (
-            <p className="text-sm text-white/80 mt-2 line-clamp-2">{profile.bio}</p>
-          )}
-          {profile.interests.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {profile.interests.slice(0, 4).map((interest) => (
-                <span
-                  key={interest}
-                  className="px-2.5 py-1 text-xs font-medium rounded-full bg-white/20 text-white backdrop-blur-sm"
-                >
-                  {interest}
-                </span>
-              ))}
-            </div>
+            <p className="text-sm opacity-90 line-clamp-2">
+              {profile.bio}
+            </p>
           )}
         </div>
       </div>
-    </div>
-  )
-}
 
-interface SwipeButtonsProps {
-  onDislike: () => void
-  onLike: () => void
-  disabled?: boolean
-}
-
-export function SwipeButtons({ onDislike, onLike, disabled }: SwipeButtonsProps) {
-  return (
-    <div className="flex items-center justify-center gap-6">
-      <button
-        onClick={onDislike}
-        disabled={disabled}
-        className="flex items-center justify-center w-16 h-16 rounded-full border-2 border-destructive bg-card text-destructive shadow-lg hover:bg-destructive hover:text-destructive-foreground transition-colors disabled:opacity-50"
-        aria-label="Dislike"
-      >
-        <X className="w-7 h-7" />
-      </button>
-      <button
-        onClick={onLike}
-        disabled={disabled}
-        className="flex items-center justify-center w-16 h-16 rounded-full border-2 border-green-500 bg-card text-green-500 shadow-lg hover:bg-green-500 hover:text-white transition-colors disabled:opacity-50"
-        aria-label="Like"
-      >
-        <Heart className="w-7 h-7" />
-      </button>
+      {/* Interests */}
+      {profile.interests && profile.interests.length > 0 && (
+        <div className="p-6">
+          <h3 className="text-sm font-semibold text-[#1A1A2E] mb-3">Интересы</h3>
+          <div className="flex flex-wrap gap-2">
+            {profile.interests.map((interest, index) => (
+              <span
+                key={index}
+                className="px-3 py-1.5 bg-gradient-to-r from-[#8B1E3F]/10 to-[#D4A574]/10 text-[#8B1E3F] text-sm font-medium rounded-full"
+              >
+                {interest}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
