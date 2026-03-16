@@ -5,7 +5,8 @@ import Link from 'next/link'
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const {  { user } } = await supabase.auth.getUser()
+  // ✅ ИСПРАВЛЕНО: добавлено `data:`
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
     redirect('/discover')
