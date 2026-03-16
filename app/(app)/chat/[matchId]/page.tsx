@@ -30,17 +30,22 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const {  { user } } = await supabase.auth.getUser()
+      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
+      const authResponse = await supabase.auth.getUser()
+      const user = authResponse.data?.user
+      
       if (!user) {
         router.push('/auth/login')
         return
       }
 
-      const {  profileData } = await supabase
+      const profileResponse = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
+
+      const profileData = profileResponse.data
 
       if (profileData) {
         setProfile({
@@ -65,7 +70,10 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     setSaving(true)
     try {
-      const {  { user } } = await supabase.auth.getUser()
+      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
+      const authResponse = await supabase.auth.getUser()
+      const user = authResponse.data?.user
+      
       if (!user) return
 
       const { error } = await supabase
@@ -85,9 +93,7 @@ export default function ProfilePage() {
 
       if (error) throw error
 
-      // Вибрация успеха
       if (navigator.vibrate) navigator.vibrate([10, 5, 10])
-      
       alert('Профиль успешно сохранён! ✨')
     } catch (error) {
       console.error('Error saving profile:', error)
@@ -166,11 +172,7 @@ export default function ProfilePage() {
             <div className="absolute inset-0 bg-gradient-to-br from-[#8B1E3F] to-[#D4A574] rounded-full blur-xl opacity-50" />
             <div className="relative w-32 h-32 bg-gradient-to-br from-[#E5E7EB] to-[#D1D5DB] rounded-full overflow-hidden border-4 border-white shadow-2xl">
               {profile.photo_url ? (
-                <img
-                  src={profile.photo_url}
-                  alt={profile.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={profile.photo_url} alt={profile.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <User className="w-16 h-16 text-[#9CA3AF]" />
@@ -193,8 +195,7 @@ export default function ProfilePage() {
           {/* Name */}
           <div>
             <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-              <User className="w-4 h-4 inline mr-1" />
-              Имя
+              <User className="w-4 h-4 inline mr-1" /> Имя
             </label>
             <input
               type="text"
@@ -208,8 +209,7 @@ export default function ProfilePage() {
           {/* Bio */}
           <div>
             <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-              <Sparkles className="w-4 h-4 inline mr-1" />
-              О себе
+              <Sparkles className="w-4 h-4 inline mr-1" /> О себе
             </label>
             <textarea
               value={profile.bio}
@@ -224,8 +224,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-                <Calendar className="w-4 h-4 inline mr-1" />
-                Возраст
+                <Calendar className="w-4 h-4 inline mr-1" /> Возраст
               </label>
               <input
                 type="number"
@@ -237,8 +236,7 @@ export default function ProfilePage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-                <MapPin className="w-4 h-4 inline mr-1" />
-                Город
+                <MapPin className="w-4 h-4 inline mr-1" /> Город
               </label>
               <input
                 type="text"
@@ -253,9 +251,7 @@ export default function ProfilePage() {
           {/* Gender & Looking for */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-                Ваш пол
-              </label>
+              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">Ваш пол</label>
               <select
                 value={profile.gender}
                 onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
@@ -268,9 +264,7 @@ export default function ProfilePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-                Кого ищете
-              </label>
+              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">Кого ищете</label>
               <select
                 value={profile.looking_for}
                 onChange={(e) => setProfile({ ...profile, looking_for: e.target.value })}
@@ -286,9 +280,7 @@ export default function ProfilePage() {
 
           {/* Photo URL */}
           <div>
-            <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-              Ссылка на фото
-            </label>
+            <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">Ссылка на фото</label>
             <input
               type="url"
               value={profile.photo_url}
@@ -301,8 +293,7 @@ export default function ProfilePage() {
           {/* Interests */}
           <div>
             <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
-              <Heart className="w-4 h-4 inline mr-1" />
-              Интересы
+              <Heart className="w-4 h-4 inline mr-1" /> Интересы
             </label>
             <div className="flex gap-2 mb-3">
               <input
@@ -327,10 +318,7 @@ export default function ProfilePage() {
                   className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#8B1E3F]/10 to-[#D4A574]/10 text-[#8B1E3F] text-sm font-medium rounded-full"
                 >
                   {interest}
-                  <button
-                    onClick={() => removeInterest(interest)}
-                    className="hover:text-[#D4A574] transition-colors"
-                  >
+                  <button onClick={() => removeInterest(interest)} className="hover:text-[#D4A574] transition-colors">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
