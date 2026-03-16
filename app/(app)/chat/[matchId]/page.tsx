@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import { Send, ArrowLeft, MoreVertical, Heart, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
-import BottomNav from '@/components/bottom-nav'
+import { BottomNav } from '@/components/bottom-nav'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Message {
@@ -41,7 +41,6 @@ export default function ChatPage() {
   useEffect(() => {
     initializeChat()
     
-    // Подписка на новые сообщения
     const channel = supabase
       .channel(`chat-${matchId}`)
       .on(
@@ -55,8 +54,6 @@ export default function ChatPage() {
         (payload) => {
           const newMsg = payload.new as Message
           setMessages((prev) => [...prev, newMsg])
-          
-          // Вибрация при новом сообщении
           if (navigator.vibrate) navigator.vibrate([10])
         }
       )
@@ -73,7 +70,10 @@ export default function ChatPage() {
 
   const initializeChat = async () => {
     try {
-      const {  { user } } = await supabase.auth.getUser()
+      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
+      const authResponse = await supabase.auth.getUser()
+      const user = authResponse.data?.user
+      
       if (!user) {
         router.push('/auth/login')
         return
@@ -82,12 +82,13 @@ export default function ChatPage() {
       setCurrentUserId(user.id)
 
       // Получаем информацию о матче
-      const {  match } = await supabase
+      const matchResponse = await supabase
         .from('matches')
         .select('user1_id, user2_id')
         .eq('id', matchId)
         .single()
 
+      const match = matchResponse.data
       if (!match) {
         router.push('/chat')
         return
@@ -96,22 +97,22 @@ export default function ChatPage() {
       const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id
 
       // Получаем профиль собеседника
-      const {  profileData } = await supabase
+      const profileResponse = await supabase
         .from('profiles')
         .select('id, name, age, photo_url, bio')
         .eq('id', otherUserId)
         .single()
 
-      setProfile(profileData)
+      setProfile(profileResponse.data)
 
       // Получаем сообщения
-      const {  messagesData } = await supabase
+      const messagesResponse = await supabase
         .from('messages')
         .select('*')
         .eq('match_id', matchId)
         .order('created_at', { ascending: true })
 
-      setMessages(messagesData || [])
+      setMessages(messagesResponse.data || [])
 
       // Помечаем сообщения как прочитанные
       await supabase
@@ -131,14 +132,17 @@ export default function ChatPage() {
     if (!newMessage.trim() || !currentUserId) return
 
     try {
-      const {  { user } } = await supabase.auth.getUser()
-      
-      const {  match } = await supabase
+      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
+      const authResponse = await supabase.auth.getUser()
+      const user = authResponse.data?.user
+
+      const matchResponse = await supabase
         .from('matches')
         .select('user1_id, user2_id')
         .eq('id', matchId)
         .single()
 
+      const match = matchResponse.data
       const receiverId = match.user1_id === user?.id ? match.user2_id : match.user1_id
 
       await supabase.from('messages').insert({
@@ -150,8 +154,6 @@ export default function ChatPage() {
       })
 
       setNewMessage('')
-      
-      // Вибрация при отправке
       if (navigator.vibrate) navigator.vibrate([5])
     } catch (error) {
       console.error('Error sending message:', error)
@@ -176,7 +178,7 @@ export default function ChatPage() {
           <div className="relative mb-4">
             <div className="absolute inset-0 bg-gradient-to-br from-[#8B1E3F] to-[#D4A574] rounded-full blur-lg opacity-50 animate-pulse" />
             <div className="relative flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#8B1E3F] to-[#D4A574] rounded-full">
-              <MessageCircle className="w-8 h-8 text-white animate-pulse" />
+              <Heart className="w-8 h-8 text-white animate-pulse" />
             </div>
           </div>
           <p className="text-[#6B7280] font-medium">Загрузка чата...</p>
