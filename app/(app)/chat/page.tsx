@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { MessageCircle, Clock, Search, Sparkles } from 'lucide-react'
 import Link from 'next/link'
-// ✅ ИСПРАВЛЕНО: именованный импорт вместо default
 import { BottomNav } from '@/components/bottom-nav'
 
 interface Chat {
@@ -63,13 +62,17 @@ export default function ChatListPage() {
 
   const loadChats = async () => {
     try {
-      const {  { user } } = await supabase.auth.getUser()
+      // ✅ БЕЗОПАСНЫЙ СПОСОБ: без сложной деструктуризации
+      const authResponse = await supabase.auth.getUser()
+      const user = authResponse.data?.user
+      
       if (!user) {
         router.push('/auth/login')
         return
       }
 
-      const {  matches } = await supabase
+      // Получаем все матчи пользователя
+      const matchesResponse = await supabase
         .from('matches')
         .select(`
           id,
@@ -87,19 +90,27 @@ export default function ChatListPage() {
         .eq('accepted', true)
         .order('created_at', { ascending: false })
 
+      const matches = matchesResponse.data
+
+      // Форматируем чаты с последними сообщениями
       const formattedChats = await Promise.all(
-        (matches || []).map(async (match) => {
+        (matches || []).map(async (match: any) => {
           const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id
           
-          const {  profile } = await supabase
+          // Получаем профиль собеседника
+          const profileResponse = await supabase
             .from('profiles')
             .select('id, name, age, photo_url')
             .eq('id', otherUserId)
             .single()
 
+          const profile = profileResponse.data
+
+          // Получаем последнее сообщение
           const messages = match.messages || []
           const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined
 
+          // Считаем непрочитанные
           const unread_count = messages.filter(
             (m: any) => m.sender_id === otherUserId && !m.read
           ).length
@@ -279,7 +290,6 @@ export default function ChatListPage() {
         )}
       </div>
 
-      {/* ✅ BottomNav с правильным импортом */}
       <BottomNav />
     </div>
   )
