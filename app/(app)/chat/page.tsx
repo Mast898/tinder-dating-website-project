@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { MessageCircle, Clock, Search, Sparkles } from 'lucide-react'
 import Link from 'next/link'
-import BottomNav from '@/components/bottom-nav'
+// ✅ ИСПРАВЛЕНО: именованный импорт вместо default
+import { BottomNav } from '@/components/bottom-nav'
 
 interface Chat {
   id: string
@@ -39,7 +40,6 @@ export default function ChatListPage() {
   useEffect(() => {
     loadChats()
     
-    // Подписка на новые сообщения
     const channel = supabase
       .channel('chat-list-updates')
       .on(
@@ -63,15 +63,13 @@ export default function ChatListPage() {
 
   const loadChats = async () => {
     try {
-      // ✅ ИСПРАВЛЕНО: добавлено ``
-      const { data: { user } } = await supabase.auth.getUser()
+      const {  { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/auth/login')
         return
       }
 
-      // Получаем все матчи пользователя
-      const { data: matches } = await supabase
+      const {  matches } = await supabase
         .from('matches')
         .select(`
           id,
@@ -89,23 +87,19 @@ export default function ChatListPage() {
         .eq('accepted', true)
         .order('created_at', { ascending: false })
 
-      // Форматируем чаты с последними сообщениями
       const formattedChats = await Promise.all(
         (matches || []).map(async (match) => {
           const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id
           
-          // Получаем профиль собеседника
-          const { data: profile } = await supabase
+          const {  profile } = await supabase
             .from('profiles')
             .select('id, name, age, photo_url')
             .eq('id', otherUserId)
             .single()
 
-          // Получаем последнее сообщение
           const messages = match.messages || []
           const lastMessage = messages.length > 0 ? messages[messages.length - 1] : undefined
 
-          // Считаем непрочитанные
           const unread_count = messages.filter(
             (m: any) => m.sender_id === otherUserId && !m.read
           ).length
@@ -285,6 +279,7 @@ export default function ChatListPage() {
         )}
       </div>
 
+      {/* ✅ BottomNav с правильным импортом */}
       <BottomNav />
     </div>
   )
