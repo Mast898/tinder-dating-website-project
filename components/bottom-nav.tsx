@@ -286,4 +286,4 @@ export function BottomNav() {
       <div className="h-[env(safe-area-inset-bottom)]" />
     </motion.nav>
   )
-}
+} 
