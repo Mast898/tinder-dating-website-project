@@ -30,7 +30,6 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
       const authResponse = await supabase.auth.getUser()
       const user = authResponse.data?.user
       
@@ -61,7 +60,7 @@ export default function ProfilePage() {
         })
       }
     } catch (error) {
-      console.error('Error loading profile:', error)
+      console.error('Ошибка загрузки профиля:', error)
     } finally {
       setLoading(false)
     }
@@ -70,7 +69,6 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     setSaving(true)
     try {
-      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
       const authResponse = await supabase.auth.getUser()
       const user = authResponse.data?.user
       
@@ -96,7 +94,7 @@ export default function ProfilePage() {
       if (navigator.vibrate) navigator.vibrate([10, 5, 10])
       alert('Профиль успешно сохранён! ✨')
     } catch (error) {
-      console.error('Error saving profile:', error)
+      console.error('Ошибка сохранения профиля:', error)
       alert('Ошибка при сохранении профиля')
     } finally {
       setSaving(false)
@@ -202,7 +200,7 @@ export default function ProfilePage() {
               value={profile.name}
               onChange={(e) => setProfile({ ...profile, name: e.target.value })}
               className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
-              placeholder="Ваше имя"
+              placeholder="Введите ваше имя"
             />
           </div>
 
