@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 import { Flame, Heart, MessageCircle, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { motion, AnimatePresence } from 'framer-motion'
 
 interface NavItem {
   href: string
@@ -96,8 +95,7 @@ export function BottomNav() {
 
   const fetchNotifications = async () => {
     try {
-      // ПРАВИЛЬНО - добавляем `data:`
-      const { data: { user } } = await supabase.auth.getUser()
+      const {  { user } } = await supabase.auth.getUser()
       if (!user) return
 
       // Новые матчи
@@ -144,7 +142,7 @@ export function BottomNav() {
   }
 
   // ─────────────────────────────────────────────
-  // 3. Swipe между вкладками
+  // 3. Swipe между вкладками (без framer-motion)
   // ─────────────────────────────────────────────
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
@@ -186,13 +184,10 @@ export function BottomNav() {
   // Render
   // ─────────────────────────────────────────────
   return (
-    <motion.nav 
+    <nav 
       className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-[#E5E7EB] shadow-lg"
       role="navigation"
       aria-label="Основная навигация"
-      initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -220,63 +215,35 @@ export function BottomNav() {
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              {/* Icon with animation */}
-              <motion.div 
-                className="relative"
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.1 }}
-              >
-                <motion.div
-                  animate={isActive ? { scale: 1.1 } : { scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Icon 
-                    className={cn(
-                      'w-6 h-6 transition-all duration-200',
-                      isActive && 'fill-[#8B1E3F]/20'
-                    )} 
-                  />
-                </motion.div>
+              {/* Icon */}
+              <div className="relative">
+                <Icon 
+                  className={cn(
+                    'w-6 h-6 transition-all duration-200',
+                    isActive && 'fill-[#8B1E3F]/20 scale-110'
+                  )} 
+                />
                 
-                {/* Badge notification with spring animation */}
-                <AnimatePresence>
-                  {badge !== null && badge > 0 && (
-                    <motion.span
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                      className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] text-white text-[10px] font-bold rounded-full border-2 border-white shadow-md"
-                    >
-                      {badge > 9 ? '9+' : badge}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-              
-              {/* Label with animation */}
-              <motion.span 
-                className={cn(
-                  'text-[10px] font-medium transition-all duration-200',
-                  isActive && 'font-semibold'
+                {/* Badge notification */}
+                {badge !== null && badge > 0 && (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] text-white text-[10px] font-bold rounded-full border-2 border-white shadow-md animate-pulse">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
                 )}
-                animate={isActive ? { y: -1 } : { y: 0 }}
-              >
+              </div>
+              
+              {/* Label */}
+              <span className={cn(
+                'text-[10px] font-medium transition-all duration-200',
+                isActive && 'font-semibold'
+              )}>
                 {item.label}
-              </motion.span>
+              </span>
 
               {/* Active indicator dot */}
-              <AnimatePresence>
-                {isActive && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                    className="absolute -bottom-1 w-1.5 h-1.5 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] rounded-full"
-                  />
-                )}
-              </AnimatePresence>
+              {isActive && (
+                <div className="absolute -bottom-1 w-1.5 h-1.5 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] rounded-full" />
+              )}
             </Link>
           )
         })}
@@ -284,6 +251,6 @@ export function BottomNav() {
       
       {/* Safe area for devices with home indicator */}
       <div className="h-[env(safe-area-inset-bottom)]" />
-    </motion.nav>
+    </nav>
   )
 }
