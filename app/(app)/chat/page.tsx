@@ -51,7 +51,6 @@ export default function ChatListPage() {
         },
         () => {
           loadChats()
-          // Вибрация при новом сообщении
           if (navigator.vibrate) navigator.vibrate([15, 5, 15])
         }
       )
@@ -64,14 +63,15 @@ export default function ChatListPage() {
 
   const loadChats = async () => {
     try {
-      const {  { user } } = await supabase.auth.getUser()
+      // ✅ ИСПРАВЛЕНО: добавлено ``
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/auth/login')
         return
       }
 
       // Получаем все матчи пользователя
-      const {  matches } = await supabase
+      const { data: matches } = await supabase
         .from('matches')
         .select(`
           id,
@@ -95,7 +95,7 @@ export default function ChatListPage() {
           const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id
           
           // Получаем профиль собеседника
-          const {  profile } = await supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('id, name, age, photo_url')
             .eq('id', otherUserId)
@@ -199,7 +199,6 @@ export default function ChatListPage() {
                       )}
                     </div>
                     
-                    {/* Online indicator */}
                     {chat.profile.online && (
                       <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
                     )}
