@@ -1,173 +1,128 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter, useParams } from 'next/navigation'
-import { Send, ArrowLeft, MoreVertical, Heart, Image as ImageIcon } from 'lucide-react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { User, LogOut, Camera, MapPin, Calendar, Heart, Sparkles, Save, X } from 'lucide-react'
 import { BottomNav } from '@/components/bottom-nav'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
-interface Message {
-  id: string
-  sender_id: string
-  content: string
-  created_at: string
-  read: boolean
-}
-
-interface Profile {
-  id: string
-  name: string
-  age: number
-  photo_url: string
-  bio: string
-  online: boolean
-}
-
-export default function ChatPage() {
-  const params = useParams()
-  const matchId = params.matchId as string
+export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
-  
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [currentUserId, setCurrentUserId] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [saving, setSaving] = useState(false)
+  const [profile, setProfile] = useState({
+    name: '',
+    bio: '',
+    age: '',
+    city: '',
+    gender: '',
+    looking_for: '',
+    photo_url: '',
+    interests: [] as string[],
+    new_interest: ''
+  })
 
   useEffect(() => {
-    initializeChat()
-    
-    const channel = supabase
-      .channel(`chat-${matchId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `match_id=eq.${matchId}`
-        },
-        (payload) => {
-          const newMsg = payload.new as Message
-          setMessages((prev) => [...prev, newMsg])
-          if (navigator.vibrate) navigator.vibrate([10])
-        }
-      )
-      .subscribe()
+    loadProfile()
+  }, [])
 
-    return () => {
-      channel.unsubscribe()
-    }
-  }, [matchId])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  const initializeChat = async () => {
+  const loadProfile = async () => {
     try {
-      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
-      const authResponse = await supabase.auth.getUser()
-      const user = authResponse.data?.user
-      
+      const {  { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/auth/login')
         return
       }
 
-      setCurrentUserId(user.id)
-
-      // Получаем информацию о матче
-      const matchResponse = await supabase
-        .from('matches')
-        .select('user1_id, user2_id')
-        .eq('id', matchId)
-        .single()
-
-      const match = matchResponse.data
-      if (!match) {
-        router.push('/chat')
-        return
-      }
-
-      const otherUserId = match.user1_id === user.id ? match.user2_id : match.user1_id
-
-      // Получаем профиль собеседника
-      const profileResponse = await supabase
+      const {  profileData } = await supabase
         .from('profiles')
-        .select('id, name, age, photo_url, bio')
-        .eq('id', otherUserId)
+        .select('*')
+        .eq('id', user.id)
         .single()
 
-      setProfile(profileResponse.data)
-
-      // Получаем сообщения
-      const messagesResponse = await supabase
-        .from('messages')
-        .select('*')
-        .eq('match_id', matchId)
-        .order('created_at', { ascending: true })
-
-      setMessages(messagesResponse.data || [])
-
-      // Помечаем сообщения как прочитанные
-      await supabase
-        .from('messages')
-        .update({ read: true })
-        .eq('match_id', matchId)
-        .eq('receiver_id', user.id)
-        .eq('read', false)
+      if (profileData) {
+        setProfile({
+          name: profileData.name || '',
+          bio: profileData.bio || '',
+          age: profileData.age?.toString() || '',
+          city: profileData.city || '',
+          gender: profileData.gender || '',
+          looking_for: profileData.looking_for || '',
+          photo_url: profileData.photo_url || '',
+          interests: profileData.interests || [],
+          new_interest: ''
+        })
+      }
     } catch (error) {
-      console.error('Error initializing chat:', error)
+      console.error('Error loading profile:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !currentUserId) return
-
+  const saveProfile = async () => {
+    setSaving(true)
     try {
-      // ✅ БЕЗОПАСНЫЙ ДОСТУП к пользователю
-      const authResponse = await supabase.auth.getUser()
-      const user = authResponse.data?.user
+      const {  { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-      const matchResponse = await supabase
-        .from('matches')
-        .select('user1_id, user2_id')
-        .eq('id', matchId)
-        .single()
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          name: profile.name,
+          bio: profile.bio,
+          age: profile.age ? parseInt(profile.age) : null,
+          city: profile.city,
+          gender: profile.gender,
+          looking_for: profile.looking_for,
+          photo_url: profile.photo_url,
+          interests: profile.interests,
+          updated_at: new Date().toISOString()
+        })
 
-      const match = matchResponse.data
-      const receiverId = match.user1_id === user?.id ? match.user2_id : match.user1_id
+      if (error) throw error
 
-      await supabase.from('messages').insert({
-        match_id: matchId,
-        sender_id: user?.id,
-        receiver_id: receiverId,
-        content: newMessage.trim(),
-        read: false
-      })
-
-      setNewMessage('')
-      if (navigator.vibrate) navigator.vibrate([5])
+      // Вибрация успеха
+      if (navigator.vibrate) navigator.vibrate([10, 5, 10])
+      
+      alert('Профиль успешно сохранён! ✨')
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('Error saving profile:', error)
+      alert('Ошибка при сохранении профиля')
+    } finally {
+      setSaving(false)
     }
   }
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
+
+  const addInterest = () => {
+    if (profile.new_interest.trim() && !profile.interests.includes(profile.new_interest.trim())) {
+      setProfile({
+        ...profile,
+        interests: [...profile.interests, profile.new_interest.trim()],
+        new_interest: ''
+      })
+    }
+  }
+
+  const removeInterest = (interest: string) => {
+    setProfile({
+      ...profile,
+      interests: profile.interests.filter(i => i !== interest)
+    })
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter') {
       e.preventDefault()
-      sendMessage()
+      addInterest()
     }
   }
 
@@ -178,154 +133,231 @@ export default function ChatPage() {
           <div className="relative mb-4">
             <div className="absolute inset-0 bg-gradient-to-br from-[#8B1E3F] to-[#D4A574] rounded-full blur-lg opacity-50 animate-pulse" />
             <div className="relative flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#8B1E3F] to-[#D4A574] rounded-full">
-              <Heart className="w-8 h-8 text-white animate-pulse" />
+              <User className="w-8 h-8 text-white animate-pulse" />
             </div>
           </div>
-          <p className="text-[#6B7280] font-medium">Загрузка чата...</p>
+          <p className="text-[#6B7280] font-medium">Загрузка профиля...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen pb-24 bg-gradient-to-br from-[#FDF8F5] via-white to-[#F5F0EC] flex flex-col">
+    <div className="min-h-screen pb-24 bg-gradient-to-br from-[#FDF8F5] via-white to-[#F5F0EC]">
       {/* Header */}
-      <div className="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-[#E5E7EB] px-4 py-3 z-10">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <Link
-            href="/chat"
-            className="p-2 hover:bg-[#F9FAFB] rounded-xl transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-[#1A1A2E]" />
-          </Link>
-          
-          {profile && (
-            <>
-              <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#E5E7EB] to-[#D1D5DB] rounded-full overflow-hidden">
-                  {profile.photo_url ? (
-                    <img
-                      src={profile.photo_url}
-                      alt={profile.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <Heart className="w-5 h-5 text-[#9CA3AF]" />
-                    </div>
-                  )}
+      <div className="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-[#E5E7EB] px-6 py-4 z-10">
+        <div className="max-w-lg mx-auto">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] bg-clip-text text-transparent">
+            Профиль
+          </h1>
+        </div>
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+        
+        {/* Avatar */}
+        <motion.div 
+          className="flex justify-center"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#8B1E3F] to-[#D4A574] rounded-full blur-xl opacity-50" />
+            <div className="relative w-32 h-32 bg-gradient-to-br from-[#E5E7EB] to-[#D1D5DB] rounded-full overflow-hidden border-4 border-white shadow-2xl">
+              {profile.photo_url ? (
+                <img
+                  src={profile.photo_url}
+                  alt={profile.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <User className="w-16 h-16 text-[#9CA3AF]" />
                 </div>
-                {profile.online && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                )}
-              </div>
-              
-              <div className="flex-1">
-                <h2 className="font-semibold text-[#1A1A2E]">
-                  {profile.name}{profile.age ? `, ${profile.age}` : ''}
-                </h2>
-                <p className="text-xs text-[#9CA3AF]">
-                  {profile.online ? 'онлайн' : 'был(а) недавно'}
-                </p>
-              </div>
-            </>
-          )}
-          
-          <button className="p-2 hover:bg-[#F9FAFB] rounded-xl transition-colors">
-            <MoreVertical className="w-5 h-5 text-[#1A1A2E]" />
-          </button>
-        </div>
-      </div>
+              )}
+            </div>
+            <button className="absolute bottom-0 right-0 p-2 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] text-white rounded-full shadow-lg hover:scale-110 transition-transform">
+              <Camera className="w-5 h-5" />
+            </button>
+          </div>
+        </motion.div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-lg mx-auto space-y-4">
-          <AnimatePresence>
-            {messages.map((message, index) => {
-              const isOwn = message.sender_id === currentUserId
-              const showAvatar = index === 0 || messages[index - 1].sender_id !== message.sender_id
-
-              return (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
-                >
-                  {/* Avatar */}
-                  {showAvatar && !isOwn && profile ? (
-                    <div className="w-8 h-8 bg-gradient-to-br from-[#E5E7EB] to-[#D1D5DB] rounded-full overflow-hidden flex-shrink-0">
-                      {profile.photo_url ? (
-                        <img
-                          src={profile.photo_url}
-                          alt={profile.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <Heart className="w-4 h-4 text-[#9CA3AF]" />
-                        </div>
-                      )}
-                    </div>
-                  ) : !isOwn ? (
-                    <div className="w-8 flex-shrink-0" />
-                  ) : null}
-
-                  {/* Message bubble */}
-                  <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
-                    <div
-                      className={`px-4 py-2.5 rounded-2xl ${
-                        isOwn
-                          ? 'bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] text-white rounded-br-md'
-                          : 'bg-white/80 backdrop-blur-xl border border-[#E5E7EB] text-[#1A1A2E] rounded-bl-md'
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-                    </div>
-                    
-                    <span className="text-xs text-[#9CA3AF] mt-1 px-1">
-                      {new Date(message.created_at).toLocaleTimeString('ru-RU', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="sticky bottom-0 bg-white/80 backdrop-blur-xl border-t border-[#E5E7EB] px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-end gap-2">
-          <button className="p-3 hover:bg-[#F9FAFB] rounded-xl transition-colors">
-            <ImageIcon className="w-5 h-5 text-[#9CA3AF]" />
-          </button>
-          
-          <div className="flex-1 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB] focus-within:border-[#8B1E3F] focus-within:ring-2 focus-within:ring-[#8B1E3F]/20 transition-all">
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Напишите сообщение..."
-              rows={1}
-              className="w-full px-4 py-3 bg-transparent resize-none outline-none text-[#1A1A2E] placeholder:text-[#9CA3AF] max-h-32"
-              style={{ minHeight: '48px' }}
+        {/* Form */}
+        <motion.div 
+          className="space-y-5"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+              <User className="w-4 h-4 inline mr-1" />
+              Имя
+            </label>
+            <input
+              type="text"
+              value={profile.name}
+              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
+              placeholder="Ваше имя"
             />
           </div>
-          
-          <button
-            onClick={sendMessage}
-            disabled={!newMessage.trim()}
-            className="p-3 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] text-white rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+
+          {/* Bio */}
+          <div>
+            <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+              <Sparkles className="w-4 h-4 inline mr-1" />
+              О себе
+            </label>
+            <textarea
+              value={profile.bio}
+              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+              rows={3}
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all resize-none"
+              placeholder="Расскажите о себе..."
+            />
+          </div>
+
+          {/* Age & City */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Возраст
+              </label>
+              <input
+                type="number"
+                value={profile.age}
+                onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
+                placeholder="25"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Город
+              </label>
+              <input
+                type="text"
+                value={profile.city}
+                onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
+                placeholder="Москва"
+              />
+            </div>
+          </div>
+
+          {/* Gender & Looking for */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+                Ваш пол
+              </label>
+              <select
+                value={profile.gender}
+                onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
+                className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
+              >
+                <option value="">Выбрать</option>
+                <option value="male">Мужской</option>
+                <option value="female">Женский</option>
+                <option value="other">Другой</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+                Кого ищете
+              </label>
+              <select
+                value={profile.looking_for}
+                onChange={(e) => setProfile({ ...profile, looking_for: e.target.value })}
+                className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
+              >
+                <option value="">Выбрать</option>
+                <option value="male">Мужчину</option>
+                <option value="female">Женщину</option>
+                <option value="both">Всех</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Photo URL */}
+          <div>
+            <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+              Ссылка на фото
+            </label>
+            <input
+              type="url"
+              value={profile.photo_url}
+              onChange={(e) => setProfile({ ...profile, photo_url: e.target.value })}
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
+              placeholder="https://example.com/photo.jpg"
+            />
+          </div>
+
+          {/* Interests */}
+          <div>
+            <label className="block text-sm font-semibold text-[#1A1A2E] mb-2">
+              <Heart className="w-4 h-4 inline mr-1" />
+              Интересы
+            </label>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={profile.new_interest}
+                onChange={(e) => setProfile({ ...profile, new_interest: e.target.value })}
+                onKeyPress={handleKeyPress}
+                className="flex-1 px-4 py-3 bg-white/80 backdrop-blur-xl border border-[#E5E7EB] rounded-2xl focus:ring-2 focus:ring-[#8B1E3F]/20 focus:border-[#8B1E3F] outline-none transition-all"
+                placeholder="Добавьте интерес..."
+              />
+              <button
+                onClick={addInterest}
+                className="px-4 py-3 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] text-white rounded-2xl shadow-lg hover:shadow-xl transition-all"
+              >
+                Добавить
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {profile.interests.map((interest) => (
+                <span
+                  key={interest}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#8B1E3F]/10 to-[#D4A574]/10 text-[#8B1E3F] text-sm font-medium rounded-full"
+                >
+                  {interest}
+                  <button
+                    onClick={() => removeInterest(interest)}
+                    className="hover:text-[#D4A574] transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <motion.button
+            onClick={saveProfile}
+            disabled={saving}
+            className="w-full py-4 bg-gradient-to-r from-[#8B1E3F] to-[#D4A574] text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            whileTap={{ scale: 0.98 }}
           >
-            <Send className="w-5 h-5" />
+            <Save className="w-5 h-5" />
+            {saving ? 'Сохранение...' : 'Сохранить профиль'}
+          </motion.button>
+
+          {/* Sign Out */}
+          <button
+            onClick={handleSignOut}
+            className="w-full py-4 bg-white/80 backdrop-blur-xl text-[#8B1E3F] font-semibold rounded-2xl border-2 border-[#E5E7EB] hover:border-red-300 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-5 h-5" />
+            Выйти
           </button>
-        </div>
+        </motion.div>
       </div>
 
       <BottomNav />
